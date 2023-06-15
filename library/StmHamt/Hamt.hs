@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP #-}
+
 module StmHamt.Hamt
   ( Hamt,
     new,
@@ -30,7 +32,12 @@ new = Hamt <$> newTVar By6Bits.empty
 newIO :: IO (Hamt a)
 newIO = Hamt <$> newTVarIO By6Bits.empty
 
-focus :: (Hashable key) => Focus element STM result -> (element -> key) -> key -> Hamt element -> STM result
+#if MIN_VERSION_hashable(1,4,0)
+focus :: (Hashable key)
+#else
+focus :: (Hashable key, Eq key)
+#endif
+  => Focus element STM result -> (element -> key) -> key -> Hamt element -> STM result
 focus focus elementToKey key = focusExplicitly focus (hash key) ((==) key . elementToKey)
 
 focusExplicitly :: Focus a STM b -> Int -> (a -> Bool) -> Hamt a -> STM b
@@ -41,7 +48,12 @@ focusExplicitly focus hash test hamt =
 
 -- |
 -- Returns a flag, specifying, whether the size has been affected.
-insert :: (Hashable key) => (element -> key) -> element -> Hamt element -> STM Bool
+#if MIN_VERSION_hashable(1,4,0)
+insert :: (Hashable key)
+#else
+insert :: (Hashable key, Eq key)
+#endif
+  => (element -> key) -> element -> Hamt element -> STM Bool
 insert elementToKey element =
   let !key = elementToKey element
    in insertExplicitly (hash key) ((==) key . elementToKey) element
@@ -96,7 +108,12 @@ pair depth hash1 branch1 hash2 branch2 =
 
 -- |
 -- Returns a flag, specifying, whether the size has been affected.
-lookup :: (Hashable key) => (element -> key) -> key -> Hamt element -> STM (Maybe element)
+#if MIN_VERSION_hashable(1,4,0)
+lookup :: (Hashable key)
+#else
+lookup :: (Hashable key, Eq key)
+#endif
+  => (element -> key) -> key -> Hamt element -> STM (Maybe element)
 lookup elementToKey key = lookupExplicitly (hash key) ((==) key . elementToKey)
 
 lookupExplicitly :: Int -> (a -> Bool) -> Hamt a -> STM (Maybe a)

@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP #-}
+
 -- |
 -- HAMT API,
 -- optimized for a fast 'size' operation.
@@ -50,7 +52,12 @@ reset (SizedHamt sizeVar hamt) =
     writeTVar sizeVar 0
 
 {-# INLINE focus #-}
-focus :: (Hashable key) => Focus element STM result -> (element -> key) -> key -> SizedHamt element -> STM result
+#if MIN_VERSION_hashable(1,4,0)
+focus :: (Hashable key)
+#else
+focus :: (Hashable key, Eq key)
+#endif
+  => Focus element STM result -> (element -> key) -> key -> SizedHamt element -> STM result
 focus focus elementToKey key (SizedHamt sizeVar hamt) =
   do
     (result, sizeModifier) <- Hamt.focus newFocus elementToKey key hamt
@@ -60,14 +67,24 @@ focus focus elementToKey key (SizedHamt sizeVar hamt) =
     newFocus = Focus.testingSizeChange (Just pred) Nothing (Just succ) focus
 
 {-# INLINE insert #-}
-insert :: (Hashable key) => (element -> key) -> element -> SizedHamt element -> STM ()
+#if MIN_VERSION_hashable(1,4,0)
+insert :: (Hashable key)
+#else
+insert :: (Hashable key, Eq key)
+#endif
+  => (element -> key) -> element -> SizedHamt element -> STM ()
 insert elementToKey element (SizedHamt sizeVar hamt) =
   do
     inserted <- Hamt.insert elementToKey element hamt
     when inserted (modifyTVar' sizeVar succ)
 
 {-# INLINE lookup #-}
-lookup :: (Hashable key) => (element -> key) -> key -> SizedHamt element -> STM (Maybe element)
+#if MIN_VERSION_hashable(1,4,0)
+lookup :: (Hashable key)
+#else
+lookup :: (Hashable key, Eq key)
+#endif
+  => (element -> key) -> key -> SizedHamt element -> STM (Maybe element)
 lookup elementToKey key (SizedHamt _ hamt) = Hamt.lookup elementToKey key hamt
 
 {-# INLINE unfoldlM #-}
